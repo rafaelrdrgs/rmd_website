@@ -172,7 +172,8 @@ export default function LightboxSettings({
   allFields,
   collections,
 }: LightboxSettingsProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isContentOpen, setIsContentOpen] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(true);
   const openFileManager = useEditorStore((state) => state.openFileManager);
   const getAsset = useAssetsStore((state) => state.getAsset);
 
@@ -302,278 +303,279 @@ export default function LightboxSettings({
   };
 
   return (
-    <SettingsPanel
-      title="Lightbox"
-      isOpen={isOpen}
-      onToggle={() => setIsOpen(!isOpen)}
-      action={settings.filesSource === 'files' ? (
-        <Button
-          variant="secondary"
-          size="xs"
-          onClick={handleAddFile}
-          aria-label="Add image"
-        >
-          <Icon name="plus" />
-        </Button>
-      ) : undefined}
-    >
-      <div className="flex flex-col gap-2.5">
-        {/* Source */}
-        <div className="grid grid-cols-3 items-center">
-          <Label variant="muted">Source</Label>
-          <div className="col-span-2">
-            <Select
-              value={settings.filesSource}
-              onValueChange={(v) => handleSourceChange(v as LightboxFilesSource)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="files"><Icon name="folder" className="size-3" /> File manager</SelectItem>
-                <SelectItem value="cms" disabled={!hasCmsFields}><Icon name="database" className="size-3" /> CMS field</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Files mode: manual file management */}
-        {settings.filesSource === 'files' && settings.files.length > 0 && (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-            onDragEnd={handleDragEnd}
+    <>
+      <SettingsPanel
+        title="Content"
+        isOpen={isContentOpen}
+        onToggle={() => setIsContentOpen(!isContentOpen)}
+        action={settings.filesSource === 'files' ? (
+          <Button
+            variant="secondary"
+            size="xs"
+            onClick={handleAddFile}
+            aria-label="Add image"
           >
-            <SortableContext
-              items={settings.files}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="flex flex-col gap-1">
-                {settings.files.map((fileId, index) => (
-                  <SortableFileItem
-                    key={fileId}
-                    fileId={fileId}
-                    index={index}
-                    url={getFileUrl(fileId)}
-                    filename={getAsset(fileId)?.filename || fileId}
-                    onReplace={handleReplaceFile}
-                    onRemove={handleRemoveFile}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        )}
-
-        {/* CMS mode: field selector */}
-        {settings.filesSource === 'cms' && (
+            <Icon name="plus" />
+          </Button>
+        ) : undefined}
+      >
+        <div className="flex flex-col gap-2.5">
           <div className="grid grid-cols-3 items-center">
-            <Label variant="muted">Field</Label>
+            <Label variant="muted">Source</Label>
             <div className="col-span-2">
-              <FieldSelectDropdown
-                fieldGroups={imageFieldGroups}
-                allFields={allFields || {}}
-                collections={collections || []}
-                value={currentFieldId}
-                onSelect={handleFieldSelect}
-                placeholder="Select image field"
-                allowedFieldTypes={IMAGE_FIELD_TYPES}
-              />
+              <Select
+                value={settings.filesSource}
+                onValueChange={(v) => handleSourceChange(v as LightboxFilesSource)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="files"><Icon name="folder" className="size-3" /> File manager</SelectItem>
+                  <SelectItem value="cms" disabled={!hasCmsFields}><Icon name="database" className="size-3" /> CMS field</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        )}
 
-        {/* Overlay */}
-        <div className="grid grid-cols-3 items-center">
-          <Label variant="muted">Overlay</Label>
-          <div className="col-span-2 *:w-full">
-            <ToggleGroup
-              options={[
-                { label: 'Light', value: 'light' },
-                { label: 'Dark', value: 'dark' },
-              ]}
-              value={settings.overlay}
-              onChange={(v) => updateSetting('overlay', v as LightboxOverlay)}
-            />
-          </div>
-        </div>
-
-        {/* Animation Effect */}
-        <div className="grid grid-cols-3 items-center">
-          <Label variant="muted">Effect</Label>
-          <div className="col-span-2">
-            <Select
-              value={settings.animationEffect}
-              onValueChange={(v) => updateSetting('animationEffect', v as SwiperAnimationEffect)}
+          {settings.filesSource === 'files' && settings.files.length > 0 && (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+              onDragEnd={handleDragEnd}
             >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ANIMATION_EFFECTS.map((effect) => (
-                  <SelectItem key={effect.value} value={effect.value}>
-                    {effect.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+              <SortableContext
+                items={settings.files}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex flex-col gap-1">
+                  {settings.files.map((fileId, index) => (
+                    <SortableFileItem
+                      key={fileId}
+                      fileId={fileId}
+                      index={index}
+                      url={getFileUrl(fileId)}
+                      filename={getAsset(fileId)?.filename || fileId}
+                      onReplace={handleReplaceFile}
+                      onRemove={handleRemoveFile}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
 
-        {/* Easing */}
-        <div className="grid grid-cols-3 items-center">
-          <Label variant="muted">Easing</Label>
-          <div className="col-span-2">
-            <Select
-              value={settings.easing}
-              onValueChange={(v) => updateSetting('easing', v)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {EASING_OPTIONS.map((ease) => (
-                  <SelectItem key={ease.value} value={ease.value}>
-                    <span className="flex items-center gap-2">
-                      <Icon name={ease.icon} className="size-3" />
-                      {ease.label}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {settings.filesSource === 'cms' && (
+            <div className="grid grid-cols-3 items-center">
+              <Label variant="muted">Field</Label>
+              <div className="col-span-2">
+                <FieldSelectDropdown
+                  fieldGroups={imageFieldGroups}
+                  allFields={allFields || {}}
+                  collections={collections || []}
+                  value={currentFieldId}
+                  onSelect={handleFieldSelect}
+                  placeholder="Select image field"
+                  allowedFieldTypes={IMAGE_FIELD_TYPES}
+                />
+              </div>
+            </div>
+          )}
         </div>
+      </SettingsPanel>
 
-        {/* Duration */}
-        <div className="grid grid-cols-3">
-          <Label variant="muted">Duration</Label>
-          <div className="col-span-2 *:w-full">
-            <InputGroup>
-              <InputGroupInput
-                stepper
-                step="0.1"
-                min="0"
-                value={settings.duration}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9.]/g, '');
-                  updateSetting('duration', val);
-                }}
-                onBlur={() => {
-                  const num = parseFloat(settings.duration);
-                  if (!Number.isNaN(num) && num >= 0) {
-                    updateSetting('duration', String(num));
-                  } else {
-                    updateSetting('duration', '0.5');
-                  }
-                }}
-                placeholder="0"
+      <SettingsPanel
+        title="Settings"
+        isOpen={isSettingsOpen}
+        onToggle={() => setIsSettingsOpen(!isSettingsOpen)}
+      >
+        <div className="flex flex-col gap-2.5">
+          <div className="grid grid-cols-3 items-center">
+            <div className="flex items-center gap-1.5">
+              <Label variant="muted">Group</Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Icon name="info" className="size-3 cursor-help opacity-70" />
+                </TooltipTrigger>
+                <TooltipContent align="start">Link multiple lightboxes into one shared gallery</TooltipContent>
+              </Tooltip>
+            </div>
+            <div className="col-span-2 w-full min-w-0">
+              <Input
+                size="xs"
+                className="w-full"
+                placeholder="Group ID"
+                value={settings.groupId}
+                onChange={(e) => updateSetting('groupId', e.target.value)}
               />
-              <InputGroupAddon align="inline-end" className="text-xs text-muted-foreground">
-                sec
-              </InputGroupAddon>
-            </InputGroup>
+            </div>
           </div>
-        </div>
 
-        {/* Group ID */}
-        <div className="grid grid-cols-3 items-center">
-          <div className="flex items-center gap-1.5">
-            <Label variant="muted">Group</Label>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Icon name="info" className="size-3 cursor-help opacity-70" />
-              </TooltipTrigger>
-              <TooltipContent align="start">Link multiple lightboxes into one shared gallery</TooltipContent>
-            </Tooltip>
+          <div className="grid grid-cols-3 items-center">
+            <Label variant="muted">Overlay</Label>
+            <div className="col-span-2 *:w-full">
+              <ToggleGroup
+                options={[
+                  { label: 'Light', value: 'light' },
+                  { label: 'Dark', value: 'dark' },
+                ]}
+                value={settings.overlay}
+                onChange={(v) => updateSetting('overlay', v as LightboxOverlay)}
+              />
+            </div>
           </div>
-          <div className="col-span-2 w-full min-w-0">
-            <Input
-              size="xs"
-              className="w-full"
-              placeholder="Group ID"
-              value={settings.groupId}
-              onChange={(e) => updateSetting('groupId', e.target.value)}
-            />
-          </div>
-        </div>
 
-        {/* Behavior */}
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <Label variant="muted">Behavior</Label>
+          <div className="grid grid-cols-3 items-center">
+            <Label variant="muted">Effect</Label>
+            <div className="col-span-2">
+              <Select
+                value={settings.animationEffect}
+                onValueChange={(v) => updateSetting('animationEffect', v as SwiperAnimationEffect)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ANIMATION_EFFECTS.map((effect) => (
+                    <SelectItem key={effect.value} value={effect.value}>
+                      {effect.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="col-span-2 flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <Switch
-                id="lightbox-thumbnails"
-                checked={settings.thumbnails}
-                onCheckedChange={(v) => updateSetting('thumbnails', v)}
-              />
-              <Label
-                htmlFor="lightbox-thumbnails"
-                className="cursor-pointer"
-              >Show thumbnails</Label>
+
+          <div className="grid grid-cols-3 items-center">
+            <Label variant="muted">Easing</Label>
+            <div className="col-span-2">
+              <Select
+                value={settings.easing}
+                onValueChange={(v) => updateSetting('easing', v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EASING_OPTIONS.map((ease) => (
+                    <SelectItem key={ease.value} value={ease.value}>
+                      <span className="flex items-center gap-2">
+                        <Icon name={ease.icon} className="size-3" />
+                        {ease.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="lightbox-navigation"
-                checked={settings.navigation}
-                onCheckedChange={(v) => updateSetting('navigation', v)}
-              />
-              <Label
-                htmlFor="lightbox-navigation"
-                className="cursor-pointer"
-              >Show navigation</Label>
+          </div>
+
+          <div className="grid grid-cols-3">
+            <Label variant="muted">Duration</Label>
+            <div className="col-span-2 *:w-full">
+              <InputGroup>
+                <InputGroupInput
+                  stepper
+                  step="0.1"
+                  min="0"
+                  value={settings.duration}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                    updateSetting('duration', val);
+                  }}
+                  onBlur={() => {
+                    const num = parseFloat(settings.duration);
+                    if (!Number.isNaN(num) && num >= 0) {
+                      updateSetting('duration', String(num));
+                    } else {
+                      updateSetting('duration', '0.5');
+                    }
+                  }}
+                  placeholder="0"
+                />
+                <InputGroupAddon align="inline-end" className="text-xs text-muted-foreground">
+                  sec
+                </InputGroupAddon>
+              </InputGroup>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="lightbox-pagination"
-                checked={settings.pagination}
-                onCheckedChange={(v) => updateSetting('pagination', v)}
-              />
-              <Label
-                htmlFor="lightbox-pagination"
-                className="cursor-pointer"
-              >Show pagination</Label>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label variant="muted">Behavior</Label>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="lightbox-zoom"
-                checked={settings.zoom}
-                onCheckedChange={(v) => updateSetting('zoom', v)}
-              />
-              <Label
-                htmlFor="lightbox-zoom"
-                className="cursor-pointer"
-              >Pinch to zoom</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="lightbox-double-tap-zoom"
-                checked={settings.doubleTapZoom}
-                onCheckedChange={(v) => updateSetting('doubleTapZoom', v)}
-              />
-              <Label
-                htmlFor="lightbox-double-tap-zoom"
-                className="cursor-pointer"
-              >Double-tap zoom</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="lightbox-mousewheel"
-                checked={settings.mousewheel}
-                onCheckedChange={(v) => updateSetting('mousewheel', v)}
-              />
-              <Label
-                htmlFor="lightbox-mousewheel"
-                className="cursor-pointer"
-              >Mousewheel</Label>
+            <div className="col-span-2 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="lightbox-thumbnails"
+                  checked={settings.thumbnails}
+                  onCheckedChange={(v) => updateSetting('thumbnails', v)}
+                />
+                <Label
+                  htmlFor="lightbox-thumbnails"
+                  className="cursor-pointer"
+                >Show thumbnails</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="lightbox-navigation"
+                  checked={settings.navigation}
+                  onCheckedChange={(v) => updateSetting('navigation', v)}
+                />
+                <Label
+                  htmlFor="lightbox-navigation"
+                  className="cursor-pointer"
+                >Show navigation</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="lightbox-pagination"
+                  checked={settings.pagination}
+                  onCheckedChange={(v) => updateSetting('pagination', v)}
+                />
+                <Label
+                  htmlFor="lightbox-pagination"
+                  className="cursor-pointer"
+                >Show pagination</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="lightbox-zoom"
+                  checked={settings.zoom}
+                  onCheckedChange={(v) => updateSetting('zoom', v)}
+                />
+                <Label
+                  htmlFor="lightbox-zoom"
+                  className="cursor-pointer"
+                >Pinch to zoom</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="lightbox-double-tap-zoom"
+                  checked={settings.doubleTapZoom}
+                  onCheckedChange={(v) => updateSetting('doubleTapZoom', v)}
+                />
+                <Label
+                  htmlFor="lightbox-double-tap-zoom"
+                  className="cursor-pointer"
+                >Double-tap zoom</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="lightbox-mousewheel"
+                  checked={settings.mousewheel}
+                  onCheckedChange={(v) => updateSetting('mousewheel', v)}
+                />
+                <Label
+                  htmlFor="lightbox-mousewheel"
+                  className="cursor-pointer"
+                >Mousewheel</Label>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </SettingsPanel>
+      </SettingsPanel>
+    </>
   );
 }

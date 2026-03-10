@@ -280,6 +280,7 @@ const RightSidebar = React.memo(function RightSidebar({
     let current = findLayerWithParent(allLayers, selectedLayerId)?.parent ?? null;
     while (current) {
       if (current.name === 'button') return true;
+      if (current.name === 'lightbox') return true;
       if (current.name === 'form' && selectedLayer.name === 'button') return true;
       const parentResult = findLayerWithParent(allLayers, current.id);
       current = parentResult?.parent ?? null;
@@ -2076,7 +2077,7 @@ const RightSidebar = React.memo(function RightSidebar({
             })()}
 
             {/* Link Settings - hide for form-related layers, buttons inside forms, and layers inside buttons */}
-            {selectedLayer && !['form', 'select', 'input', 'textarea', 'checkbox', 'radio', 'label'].includes(selectedLayer.name) && selectedLayer.settings?.tag !== 'label' && !shouldHideLinkSettings && (
+            {selectedLayer && !['form', 'select', 'input', 'textarea', 'checkbox', 'radio', 'label', 'lightbox'].includes(selectedLayer.name) && selectedLayer.settings?.tag !== 'label' && !shouldHideLinkSettings && (
               <LinkSettings
                 layer={selectedLayer}
                 onLayerUpdate={handleLayerUpdate}
