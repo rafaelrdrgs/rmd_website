@@ -32,7 +32,7 @@ export default function UIStateSelector({ selectedLayer }: UIStateSelectorProps)
   const selectableStyles = Object.entries(allTextStyles).filter(([key]) => !key.startsWith('dts-'));
 
   return (
-    <div className="sticky -top-2 bg-background z-10 py-4 flex flex-row gap-2">
+    <div className="sticky -top-2 bg-background z-30 py-4 flex flex-row gap-2">
       {/* Text Style Selector - show for text layers with textStyles, placed first */}
       {isTextLayer && (
         <Select
