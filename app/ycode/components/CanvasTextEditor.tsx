@@ -29,6 +29,8 @@ import BulletList from '@tiptap/extension-bullet-list';
 import OrderedList from '@tiptap/extension-ordered-list';
 import ListItem from '@tiptap/extension-list-item';
 import Heading from '@tiptap/extension-heading';
+import Blockquote from '@tiptap/extension-blockquote';
+import Code from '@tiptap/extension-code';
 import { getTextStyleClasses } from '@/lib/text-format-utils';
 import type { Layer, TextStyle, CollectionField, Collection } from '@/types';
 import type { FieldVariable } from '@/types';
@@ -232,6 +234,17 @@ function createListItemExtension(textStyles?: Record<string, TextStyle>) {
 }
 
 /**
+ * Create custom Blockquote extension with layer textStyles class
+ */
+function createBlockquoteExtension(textStyles?: Record<string, TextStyle>) {
+  return Blockquote.extend({
+    renderHTML({ HTMLAttributes }) {
+      return ['blockquote', mergeAttributes(HTMLAttributes, { class: getTextStyleClasses(textStyles, 'blockquote') }), 0];
+    },
+  });
+}
+
+/**
  * Create custom Paragraph extension with layer textStyles class
  */
 function createParagraphExtension(textStyles?: Record<string, TextStyle>) {
@@ -406,6 +419,8 @@ const CanvasTextEditor = forwardRef<CanvasTextEditorHandle, CanvasTextEditorProp
     createOrderedListExtension(textStylesRef.current),
     createListItemExtension(textStylesRef.current),
     createHeadingExtension(textStylesRef.current),
+    createBlockquoteExtension(textStylesRef.current),
+    Code,
     createDynamicStyleExtension(textStylesRef),
   ], []);
 
@@ -420,6 +435,11 @@ const CanvasTextEditor = forwardRef<CanvasTextEditorHandle, CanvasTextEditorProp
 
   // Create a ref to handle saving on unmount/finish
   const saveChangesRef = useRef<() => void>(() => {});
+  // Track whether the user has actually interacted with the editor
+  // Prevents Strict Mode double-mount or extension-stripping from persisting unwanted changes
+  const hasUserEditedRef = useRef(false);
+  // Tracks whether the editor has finished initialization (onCreate fired)
+  const editorReadyRef = useRef(false);
 
   const editor = useEditor({
     immediatelyRender: true,
@@ -453,9 +473,14 @@ const CanvasTextEditor = forwardRef<CanvasTextEditorHandle, CanvasTextEditorProp
         savedSelectionRef.current = { from, to };
       }
     },
-    onTransaction: ({ editor: editorInstance }) => {
+    onTransaction: ({ transaction, editor: editorInstance }) => {
       // Update active marks after any transaction
       updateActiveMarks();
+
+      // Track user-initiated content changes (after editor is ready)
+      if (transaction.docChanged && editorReadyRef.current) {
+        hasUserEditedRef.current = true;
+      }
 
       // Save cursor position after transaction (if editor is focused)
       if (editorInstance && editorInstance.isFocused) {
@@ -470,6 +495,8 @@ const CanvasTextEditor = forwardRef<CanvasTextEditorHandle, CanvasTextEditorProp
         doc: state.doc,
         plugins: state.plugins,
       }));
+      // Mark editor as ready — any subsequent docChanged transactions are user edits
+      editorReadyRef.current = true;
     },
     onBlur: ({ editor: editorInstance }) => {
       // Save cursor position when editor loses focus
@@ -587,17 +614,19 @@ const CanvasTextEditor = forwardRef<CanvasTextEditorHandle, CanvasTextEditorProp
       // Cleanup: save changes and unregister
       saveChangesRef.current();
       stopEditing();
+      // Reset tracking flags for Strict Mode re-mount
+      hasUserEditedRef.current = false;
+      editorReadyRef.current = false;
     };
   }, [editor, setEditor, startEditing, stopEditing, setOnFinishCallback, setOnSaveCallback, layer.id]);
 
   // Update save function when editor or onChange changes
   useEffect(() => {
     saveChangesRef.current = () => {
-      if (editor) {
+      if (editor && hasUserEditedRef.current) {
         const currentValue = editor.getJSON();
         if (JSON.stringify(currentValue) !== JSON.stringify(valueRef.current)) {
           onChange(currentValue);
-          // Update valueRef to prevent duplicate saves
           valueRef.current = currentValue;
         }
       }
@@ -610,14 +639,16 @@ const CanvasTextEditor = forwardRef<CanvasTextEditorHandle, CanvasTextEditorProp
 
     if (currentLayerIdRef.current !== layer.id) {
       // Layer has changed - save the current editor content before switching
-      if (currentLayerIdRef.current) {
+      if (currentLayerIdRef.current && hasUserEditedRef.current) {
         const currentContent = editor.getJSON();
         if (JSON.stringify(currentContent) !== JSON.stringify(valueRef.current)) {
           onChange(currentContent);
         }
       }
-      // Update to new layer ID
+      // Update to new layer ID and reset edit tracking for the new layer
       currentLayerIdRef.current = layer.id;
+      hasUserEditedRef.current = false;
+      editorReadyRef.current = false;
     }
   }, [layer.id, editor, onChange]);
 

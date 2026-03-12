@@ -473,18 +473,6 @@ const SUBLAYER_ICON_MAP: Record<string, string> = {
   richTextComponent: 'component',
 };
 
-function extractBlockText(block: any): string {
-  if (!block?.content) return '';
-  return block.content
-    .map((n: any) => {
-      if (n.type === 'text') return n.text || '';
-      if (n.type === 'dynamicVariable') return `[${n.attrs?.label || 'var'}]`;
-      if (n.content) return extractBlockText(n);
-      return '';
-    })
-    .join('');
-}
-
 /**
  * Extract sublayer metadata from a richText layer's TipTap content.
  * Returns one entry per top-level block (paragraph, heading, list, etc.).
@@ -501,28 +489,64 @@ export function getRichTextSublayers(layer: Layer): RichTextSublayer[] {
       const type = block.type;
       const icon = SUBLAYER_ICON_MAP[type] || 'box';
 
-      let label: string;
-      if (type === 'heading') {
-        const level = block.attrs?.level || 1;
-        const text = extractBlockText(block);
-        label = text ? `H${level} · ${text}` : `Heading ${level}`;
-      } else if (type === 'bulletList' || type === 'orderedList') {
-        const itemCount = block.content?.length || 0;
-        label = `${type === 'bulletList' ? 'Bullet' : 'Ordered'} list · ${itemCount} item${itemCount !== 1 ? 's' : ''}`;
-      } else if (type === 'blockquote') {
-        const text = extractBlockText(block);
-        label = text ? `Quote · ${text}` : 'Blockquote';
-      } else if (type === 'richTextComponent') {
-        label = 'Component';
-      } else {
-        const text = extractBlockText(block);
-        label = text || 'Empty paragraph';
-      }
+      const SUBLAYER_LABEL_MAP: Record<string, string> = {
+        paragraph: 'Paragraph',
+        heading: `Heading ${block.attrs?.level || 1}`,
+        bulletList: 'Bullet List',
+        orderedList: 'Ordered List',
+        blockquote: 'Blockquote',
+        richTextComponent: 'Component',
+        image: 'Image',
+        codeBlock: 'Code Block',
+        horizontalRule: 'Divider',
+      };
 
-      if (label.length > 35) label = label.slice(0, 35) + '...';
+      const label = SUBLAYER_LABEL_MAP[type] || type;
 
       return { type, label, icon };
     });
+}
+
+/**
+ * Remove a sublayer (TipTap content block) from a richText layer by index.
+ * Returns a partial Layer update with the block removed from the content,
+ * or null if the removal is invalid (e.g. last remaining block).
+ */
+export function removeRichTextSublayer(layer: Layer, sublayerIndex: number): Partial<Layer> | null {
+  const textVar = layer.variables?.text;
+  if (textVar?.type !== 'dynamic_rich_text') return null;
+  const doc = (textVar.data as any)?.content;
+  if (!doc?.content || !Array.isArray(doc.content)) return null;
+
+  // Map sublayer index back to raw content index (we filter empty paragraphs in getRichTextSublayers)
+  const visibleIndices: number[] = [];
+  doc.content.forEach((block: any, i: number) => {
+    if (block.type !== 'paragraph' || block.content?.length) {
+      visibleIndices.push(i);
+    }
+  });
+
+  const rawIndex = visibleIndices[sublayerIndex];
+  if (rawIndex === undefined) return null;
+
+  const newContent = [...doc.content];
+  newContent.splice(rawIndex, 1);
+
+  // Don't allow removing the last block
+  if (newContent.length === 0) return null;
+
+  return {
+    variables: {
+      ...layer.variables,
+      text: {
+        ...textVar,
+        data: {
+          ...(textVar.data as any),
+          content: { ...doc, content: newContent },
+        },
+      },
+    },
+  };
 }
 
 /**

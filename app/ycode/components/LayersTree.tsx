@@ -1820,11 +1820,14 @@ export default function LayersTree({
 
 // Helper function to rebuild tree structure after reordering
 function rebuildTree(
-  flattenedNodes: FlattenedItem[],
+  flattenedNodesRaw: FlattenedItem[],
   movedId: string,
   newParentId: string | null,
   newOrder: number
 ): Layer[] {
+  // Exclude virtual sublayer nodes — they don't represent real layers
+  const flattenedNodes = flattenedNodesRaw.filter(n => !n.sublayer);
+
   // Create a map of original layers to preserve all properties
   const originalLayerMap = new Map<string, Layer>();
 

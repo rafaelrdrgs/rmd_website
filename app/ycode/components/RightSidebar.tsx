@@ -2106,7 +2106,7 @@ const RightSidebar = React.memo(function RightSidebar({
             })()}
 
             {/* Link Settings - hide for form-related layers, buttons inside forms, and layers inside buttons */}
-            {selectedLayer && !['form', 'select', 'input', 'textarea', 'checkbox', 'radio', 'label', 'lightbox', 'hr'].includes(selectedLayer.name) && selectedLayer.settings?.tag !== 'label' && !shouldHideLinkSettings && (
+            {selectedLayer && !['form', 'select', 'input', 'textarea', 'checkbox', 'radio', 'label', 'lightbox', 'hr', 'richText'].includes(selectedLayer.name) && selectedLayer.settings?.tag !== 'label' && !shouldHideLinkSettings && (
               <LinkSettings
                 layer={selectedLayer}
                 onLayerUpdate={handleLayerUpdate}

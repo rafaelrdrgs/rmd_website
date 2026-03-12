@@ -59,7 +59,7 @@ import RichTextEditorSheet from './RichTextEditorSheet';
 import { buildLocalizedSlugPath, buildLocalizedDynamicPageUrl } from '@/lib/page-utils';
 import { getTranslationValue } from '@/lib/localisation-utils';
 import { cn } from '@/lib/utils';
-import { getCollectionVariable, canDeleteLayer, findLayerById, findParentCollectionLayer, canLayerHaveLink, updateLayerProps } from '@/lib/layer-utils';
+import { getCollectionVariable, canDeleteLayer, findLayerById, findParentCollectionLayer, canLayerHaveLink, updateLayerProps, removeRichTextSublayer } from '@/lib/layer-utils';
 import { CANVAS_BORDER, CANVAS_PADDING } from '@/lib/canvas-utils';
 import { buildFieldGroupsForLayer, hasFieldsMatching, flattenFieldGroups, DISPLAYABLE_FIELD_TYPES } from '@/lib/collection-field-utils';
 import { getRichTextValue } from '@/lib/tiptap-utils';
@@ -554,6 +554,8 @@ const CenterCanvas = React.memo(function CenterCanvas({
   const activeInteractionTriggerLayerId = useEditorStore((state) => state.activeInteractionTriggerLayerId);
   const richTextSheetLayerId = useEditorStore((state) => state.richTextSheetLayerId);
   const closeRichTextSheet = useEditorStore((state) => state.closeRichTextSheet);
+  const activeSublayerIndex = useEditorStore((state) => state.activeSublayerIndex);
+  const setActiveSublayerIndex = useEditorStore((state) => state.setActiveSublayerIndex);
   const elementPicker = useEditorStore((state) => state.elementPicker);
   const stopElementPicker = useEditorStore((state) => state.stopElementPicker);
   const assets = useAssetsStore((state) => state.assets);
@@ -1037,26 +1039,30 @@ const CenterCanvas = React.memo(function CenterCanvas({
       // Switch to Layers tab when a layer is clicked on canvas
       setActiveSidebarTab('layers');
 
-      // Detect if clicked on a text style element (bold, italic, etc.)
+      // Detect if clicked on a text style element or a richText sublayer block
       if (event) {
         let target = event.target as HTMLElement;
         let textStyleKey: string | null = null;
+        let blockIndex: number | null = null;
 
-        // Walk up the DOM tree to find data-style attribute
+        // Walk up the DOM tree to find data-style or data-block-index
         while (target && target !== event.currentTarget) {
-          const styleAttr = target.getAttribute?.('data-style');
-          if (styleAttr) {
-            textStyleKey = styleAttr;
-            break;
+          if (!textStyleKey) {
+            const styleAttr = target.getAttribute?.('data-style');
+            if (styleAttr) textStyleKey = styleAttr;
+          }
+          if (blockIndex === null) {
+            const blockAttr = target.getAttribute?.('data-block-index');
+            if (blockAttr !== null) blockIndex = parseInt(blockAttr, 10);
           }
           target = target.parentElement as HTMLElement;
         }
 
-        // Set the active text style key if found
         setActiveTextStyleKey(textStyleKey);
+        setActiveSublayerIndex(Number.isFinite(blockIndex) ? blockIndex : null);
       }
     }
-  }, [isPreviewMode, setSelectedLayerId, setActiveSidebarTab, setActiveTextStyleKey]);
+  }, [isPreviewMode, setSelectedLayerId, setActiveSidebarTab, setActiveTextStyleKey, setActiveSublayerIndex]);
 
   const handleCanvasLayerUpdate = useCallback((layerId: string, updates: Partial<Layer>) => {
     if (editingComponentId) {
@@ -1070,6 +1076,19 @@ const CenterCanvas = React.memo(function CenterCanvas({
 
   const handleCanvasDeleteLayer = useCallback(() => {
     if (!selectedLayerId || !currentPageId) return;
+
+    // Handle sublayer deletion (remove TipTap block, not the whole layer)
+    if (activeSublayerIndex !== null) {
+      const draft = draftsByPageId[currentPageId];
+      if (!draft) return;
+      const richTextLayer = findLayerById(draft.layers, selectedLayerId);
+      if (!richTextLayer) return;
+      const updates = removeRichTextSublayer(richTextLayer, activeSublayerIndex);
+      if (!updates) return;
+      updateLayer(currentPageId, selectedLayerId, updates);
+      setActiveSublayerIndex(null);
+      return;
+    }
 
     // Check if multi-select
     if (selectedLayerIds.length > 1) {
@@ -1096,7 +1115,7 @@ const CenterCanvas = React.memo(function CenterCanvas({
         setSelectedLayerId(null);
       }
     }
-  }, [selectedLayerId, currentPageId, selectedLayerIds, draftsByPageId, deleteLayers, clearSelection, deleteLayer, setSelectedLayerId]);
+  }, [selectedLayerId, currentPageId, selectedLayerIds, draftsByPageId, deleteLayers, clearSelection, deleteLayer, setSelectedLayerId, activeSublayerIndex, setActiveSublayerIndex, updateLayer]);
 
   const handleCanvasGapUpdate = useCallback((layerId: string, gapValue: string) => {
     if (!currentPageId) return;
@@ -2165,6 +2184,7 @@ const CenterCanvas = React.memo(function CenterCanvas({
             hoveredLayerId={hoveredLayerId}
             parentLayerId={parentLayerId}
             zoom={zoom}
+            activeSublayerIndex={activeSublayerIndex}
           />
         )}
 

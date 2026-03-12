@@ -170,6 +170,14 @@ export const DEFAULT_TEXT_STYLES: Record<string, TextStyle> = {
     label: 'List Item',
     classes: '',
   },
+  blockquote: {
+    label: 'Blockquote',
+    classes: 'border-l-[3px] border-current/20 pl-[16px]',
+    design: {
+      borders: { borderLeftWidth: '3px' },
+      spacing: { paddingLeft: '16px' },
+    },
+  },
 };
 
 /**
@@ -845,6 +853,23 @@ function renderBlock(
     );
   }
 
+  if (block.type === 'blockquote') {
+    const bqProps: Record<string, any> = {
+      key,
+      className: getTextStyleClasses(textStyles, 'blockquote'),
+    };
+    if (isEditMode) {
+      bqProps['data-style'] = 'blockquote';
+    }
+    return React.createElement(
+      'blockquote',
+      bqProps,
+      block.content?.map((child: any, childIdx: number) =>
+        renderBlock(child, childIdx, collectionItemData, pageCollectionItemData, textStyles, useSpanForParagraphs, isEditMode, linkContext, timezone, layerDataMap, components, renderComponentBlock, ancestorComponentIds)
+      )
+    );
+  }
+
   // Handle embedded component blocks
   if (block.type === 'richTextComponent' && block.attrs?.componentId) {
     return renderRichTextComponentBlock(block, key, components, renderComponentBlock, ancestorComponentIds);
@@ -973,9 +998,17 @@ export function renderRichText(
     return renderInlineContent(paragraph.content, collectionItemData, pageCollectionItemData, textStyles, isEditMode, linkContext, timezone, layerDataMap, components, renderComponentBlock, ancestorComponentIds);
   }
 
-  return doc.content.map((block: any, idx: number) =>
-    renderBlock(block, idx, collectionItemData, pageCollectionItemData, textStyles, useSpanForParagraphs, isEditMode, linkContext, timezone, layerDataMap, components, renderComponentBlock, ancestorComponentIds)
-  );
+  let visibleBlockIdx = 0;
+  return doc.content.map((block: any, idx: number) => {
+    const element = renderBlock(block, idx, collectionItemData, pageCollectionItemData, textStyles, useSpanForParagraphs, isEditMode, linkContext, timezone, layerDataMap, components, renderComponentBlock, ancestorComponentIds);
+    const isVisibleBlock = block.type !== 'paragraph' || block.content?.length;
+    if (element && isVisibleBlock && isEditMode) {
+      return React.cloneElement(element as React.ReactElement<any>, {
+        'data-block-index': visibleBlockIdx++,
+      });
+    }
+    return element;
+  });
 }
 
 /**

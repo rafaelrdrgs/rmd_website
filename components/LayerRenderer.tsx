@@ -1248,6 +1248,8 @@ const LayerItem: React.FC<{
     // Enable inline editing for text layers (both rich text and plain text)
     if (textEditable && isEditMode && !isLockedByOther) {
       setEditingLayerId(layer.id);
+      // Clear sublayer selection when entering edit mode
+      useEditorStore.getState().setActiveSublayerIndex(null);
       // Store click coordinates if provided
       if (typeof clickX === 'number' && typeof clickY === 'number') {
         setEditingClickCoords({ x: clickX, y: clickY });
