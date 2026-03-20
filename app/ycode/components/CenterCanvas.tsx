@@ -2588,20 +2588,8 @@ const CenterCanvas = React.memo(function CenterCanvas({
           style={{ padding: `${CANVAS_BORDER}px` }}
         >
           {isPreviewLoading && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-md">
-              <svg
-                className="size-12 text-foreground"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M11.4241533,0 L11.4241533,5.85877951 L6.024,8.978 L12.6155735,12.7868008 L10.951,13.749 L23.0465401,6.75101349 L23.0465401,12.6152717 L3.39516096,23.9856666 L3.3703726,24 L3.34318129,23.9827156 L0.96,22.4713365 L0.96,16.7616508 L3.36417551,18.1393242 L7.476,15.76 L0.96,11.9090099 L0.96,6.05375516 L11.4241533,0 Z"
-                  className="fill-current"
-                />
-              </svg>
-              <p className="text-sm bg-linear-to-r from-foreground/80 via-foreground/40 to-foreground/80 bg-size-[200%_100%] animate-shimmer bg-clip-text text-transparent">
-                Generating preview...
-              </p>
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background">
+              <Spinner />
             </div>
           )}
           <div
