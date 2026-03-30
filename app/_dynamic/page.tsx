@@ -118,7 +118,6 @@ export default async function DynamicHome({ searchParams }: DynamicHomeProps) {
       availableLocales={data.availableLocales}
       translations={data.translations}
       gaMeasurementId={globalSettings.gaMeasurementId}
-      globalCustomCodeHead={globalSettings.globalCustomCodeHead}
       globalCustomCodeBody={globalSettings.globalCustomCodeBody}
       ycodeBadge={globalSettings.ycodeBadge}
     />
