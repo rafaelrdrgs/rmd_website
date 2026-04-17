@@ -55,6 +55,13 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { CollectionFieldSelector, type FieldSourceType } from './CollectionFieldSelector';
 import { flattenFieldGroups, filterFieldGroupsByType, RICH_TEXT_ONLY_FIELD_TYPES, type FieldGroup } from '@/lib/collection-field-utils';
 import { buildFieldVariableData } from '@/lib/variable-format-utils';
@@ -341,6 +348,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(({
 }, ref) => {
   const isFullVariant = variant === 'full';
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [tableContextMenuOpen, setTableContextMenuOpen] = useState(false);
   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
   const [imagePopoverOpen, setImagePopoverOpen] = useState(false);
   const [componentPickerOpen, setComponentPickerOpen] = useState(false);
@@ -1424,9 +1432,87 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(({
         </div>
       )}
 
-      <div className={cn('relative', fullHeight && 'flex-1 min-h-0 flex flex-col [&>div]:flex-1 [&>div]:min-h-0 [&>div]:flex [&>div]:flex-col [&_.tiptap]:flex-1 [&_.tiptap]:min-h-0 [&_.tiptap]:overflow-y-auto')}>
-        <EditorContent editor={editor} />
-      </div>
+      <ContextMenu
+        onOpenChange={(open) => {
+          if (!open) setTableContextMenuOpen(false);
+        }}
+      >
+        <ContextMenuTrigger
+          asChild
+          disabled={disabled || !withFormatting}
+          onContextMenu={(e) => {
+            if (!editor || !withFormatting || disabled) return;
+            const target = e.target as HTMLElement;
+            const isInTable = !!target.closest('table');
+            if (!isInTable) {
+              e.preventDefault();
+              setTableContextMenuOpen(false);
+              return;
+            }
+            setTableContextMenuOpen(true);
+          }}
+        >
+          <div className={cn('relative', fullHeight && 'flex-1 min-h-0 flex flex-col [&>div]:flex-1 [&>div]:min-h-0 [&>div]:flex [&>div]:flex-col [&_.tiptap]:flex-1 [&_.tiptap]:min-h-0 [&_.tiptap]:overflow-y-auto')}>
+            <EditorContent editor={editor} />
+          </div>
+        </ContextMenuTrigger>
+        {tableContextMenuOpen && editor && (
+          <ContextMenuContent>
+            <ContextMenuItem
+              onClick={() => editor.chain().focus().addColumnBefore().run()}
+              disabled={!editor.can().addColumnBefore()}
+            >
+              Insert column before
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+              disabled={!editor.can().addColumnAfter()}
+            >
+              Insert column after
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => editor.chain().focus().addRowBefore().run()}
+              disabled={!editor.can().addRowBefore()}
+            >
+              Insert row above
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+              disabled={!editor.can().addRowAfter()}
+            >
+              Insert row below
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={() => editor.chain().focus().deleteColumn().run()}
+              disabled={!editor.can().deleteColumn()}
+            >
+              Delete column
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => editor.chain().focus().deleteRow().run()}
+              disabled={!editor.can().deleteRow()}
+            >
+              Delete row
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={() => editor.chain().focus().toggleCurrentRowHeader().run()}
+              disabled={!editor.can().toggleCurrentRowHeader()}
+            >
+              Toggle header row
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              variant="destructive"
+              onClick={() => editor.chain().focus().deleteTable().run()}
+              disabled={!editor.can().deleteTable()}
+            >
+              Delete table
+            </ContextMenuItem>
+          </ContextMenuContent>
+        )}
+      </ContextMenu>
 
       {/* Inline Variable Button - absolute positioned (when no formatting toolbar is shown) */}
       {!disabled && (!withFormatting || !showFormattingToolbar) && canShowVariables && (
